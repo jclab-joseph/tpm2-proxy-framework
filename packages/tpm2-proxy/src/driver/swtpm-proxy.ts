@@ -5,12 +5,9 @@ import * as events from 'events';
 import * as childProcess from 'child_process';
 
 import {
-  TpmControlPayload,
-  TpmDataPayload,
   TpmDownstream
 } from './base';
 import {
-  hexdump,
   SocketParam,
   parseSocketParam
 } from './utils';
@@ -39,6 +36,8 @@ export class SwtpmProxyDriver extends events.EventEmitter implements TpmDownstre
   private _beControlSocket!: net.Socket;
   private _beDataSocket!: net.Socket;
   private _process!: childProcess.ChildProcess;
+
+  private _closed: boolean = false;
 
   constructor() {
     super();
@@ -128,6 +127,7 @@ export class SwtpmProxyDriver extends events.EventEmitter implements TpmDownstre
       this._beControlServer.once('connection', (connection) => {
         connection.pause();
         this._beControlSocket = connection;
+        connection.on('close', () => this.onSocketClosed());
         connection.on('data', (data) => this.onControlReceived(data));
         onConnect();
       });
@@ -136,6 +136,7 @@ export class SwtpmProxyDriver extends events.EventEmitter implements TpmDownstre
       this._beDataServer.once('connection', (connection) => {
         connection.pause();
         this._beDataSocket = connection;
+        connection.on('close', () => this.onSocketClosed());
         connection.on('data', (data) => this.onDataReceived(data));
         onConnect();
       });
@@ -175,6 +176,11 @@ export class SwtpmProxyDriver extends events.EventEmitter implements TpmDownstre
   }
 
   close(): void {
+    if (this._closed) {
+      return ;
+    }
+
+    this._closed = true;
     if (this._beControlServer) {
       this._beControlServer.close();
     }
@@ -191,21 +197,24 @@ export class SwtpmProxyDriver extends events.EventEmitter implements TpmDownstre
       this._beDataSocket.end();
     }
     this._beDataSocket = undefined;
-    if (this._process) {
+    if (this._process && !this._process.killed) {
       this._process.kill(0);
     }
     this._process = undefined;
   }
 
   private onControlReceived(data: Buffer): void {
-    this.emit('control', {
-      raw: data
-    } as TpmControlPayload);
+    this.emit('control', data);
   }
 
   private onDataReceived(data: Buffer): void {
-    this.emit('data', {
-      raw: data
-    } as TpmDataPayload);
+    this.emit('data', data);
+  }
+
+  private onSocketClosed(): void {
+    if (!this._closed) {
+      this.close();
+      this.emit('close');
+    }
   }
 }

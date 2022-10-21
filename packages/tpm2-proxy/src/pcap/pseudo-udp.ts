@@ -55,9 +55,9 @@ export class PseudoIPv4Udp {
 
     // dest
     output[12] = this._destIp[0];
-    output[13] = this._destIp[3];
+    output[13] = this._destIp[1];
     output[14] = this._destIp[2];
-    output[15] = this._destIp[1];
+    output[15] = this._destIp[3];
 
     output[16] = this._srcIp[0];
     output[17] = this._srcIp[1];

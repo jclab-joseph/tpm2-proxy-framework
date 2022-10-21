@@ -167,9 +167,9 @@ static int parseSocketAddr(socket_addr_param_t* output, const char* params) {
 
 static int forward_by_read(int out_fd, int in_fd) {
   char buffer[4096];
-  int recvd = recv(in_fd, buffer, sizeof(buffer), 0);
+  int recvd = read_eintr(in_fd, buffer, sizeof(buffer));
   if (recvd > 0) {
-    int written = write(out_fd, buffer, recvd);
+    int written = write_full(out_fd, buffer, recvd);
     if (written > 0) {
       return written;
     }

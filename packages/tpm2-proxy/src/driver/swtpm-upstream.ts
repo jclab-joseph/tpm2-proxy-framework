@@ -1,7 +1,7 @@
 import * as events from 'events';
 import * as net from 'net';
-import {TpmControlPayload, TpmDataPayload, TpmUpstream} from './base';
-import {hexdump, parseKeyValue, SocketParam} from './utils';
+import {TpmUpstream} from './base';
+import {parseKeyValue, SocketParam} from './utils';
 
 function parseSwtpmAddr(input: string): SocketParam {
   const options = input.split(',')
@@ -51,6 +51,8 @@ export class SwtpmUpstreamDriver extends events.EventEmitter implements TpmUpstr
   private _ctrlSocket!: net.Socket;
   private _dataSocket!: net.Socket;
 
+  private _closed: boolean = false;
+
   connect(param: SwtpmConnectParams): Promise<void> {
     const ctrlAddr = parseSwtpmAddr(param.ctrl);
     const dataAddr = parseSwtpmAddr(param.data);
@@ -81,6 +83,7 @@ export class SwtpmUpstreamDriver extends events.EventEmitter implements TpmUpstr
       this._ctrlSocket.once('error', onError);
       this._ctrlSocket.once('ready', () => {
         state.ctrl = true;
+        this._ctrlSocket.once('close', this.onSocketClosed);
         this._ctrlSocket.pause();
         onConnect();
       });
@@ -90,6 +93,7 @@ export class SwtpmUpstreamDriver extends events.EventEmitter implements TpmUpstr
       this._dataSocket.once('error', onError);
       this._dataSocket.once('ready', () => {
         state.data = true;
+        this._ctrlSocket.once('close', this.onSocketClosed);
         this._dataSocket.pause();
         onConnect();
       });
@@ -121,17 +125,28 @@ export class SwtpmUpstreamDriver extends events.EventEmitter implements TpmUpstr
   }
 
   close(): void {
+    if (this._ctrlSocket && !this._ctrlSocket.destroyed) {
+      this._ctrlSocket.end();
+      this._ctrlSocket = undefined;
+    }
+    if (this._dataSocket && !this._dataSocket.destroyed) {
+      this._dataSocket.end();
+      this._dataSocket = undefined;
+    }
   }
 
   private onControlReceived(data: Buffer): void {
-    this.emit('control', {
-      raw: data
-    } as TpmControlPayload);
+    this.emit('control', data);
   }
 
   private onDataReceived(data: Buffer): void {
-    this.emit('data', {
-      raw: data
-    } as TpmDataPayload);
+    this.emit('data', data);
+  }
+
+  private onSocketClosed(): void {
+    if (!this._closed) {
+      this._closed = true;
+      this.emit('close');
+    }
   }
 }
