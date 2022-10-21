@@ -1,0 +1,19 @@
+{
+  "name": "simple-proxy",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "Apache-2.0",
+  "scripts": {
+    "serve": "ts-node src/app.ts"
+  },
+  "devDependencies": {
+    "@types/uuid": "^8.3.4"
+  },
+  "dependencies": {
+    "@jc-lab/tpm2-proxy": "workspace:^",
+    "@types/sprintf": "^0.1.0",
+    "sprintf": "^0.1.5",
+    "uuid": "^9.0.0"
+  },
+  "packageManager": "yarn@3.2.4"
+}
