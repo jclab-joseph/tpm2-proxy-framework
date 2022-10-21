@@ -13,7 +13,7 @@ function computeChecksum(buffer: Buffer, offset: number, size: number): number {
     sum += b;
   }
   sum = ((sum >> 16) & 0xffff) + (sum & 0xffff);
-  return sum ^ 0xffff;
+  return (sum ^ 0xffff) & 0xffff;
 }
 
 function ipToNumber(ip: string): number[] {
